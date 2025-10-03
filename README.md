@@ -117,7 +117,7 @@ python m3u8_downloader.py -u <M3U8_URL> --keep-temp
 ### 1️⃣ 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/HLS-Downloader-Plus.git
+git clone https://github.com/374857922/HLS-Downloader-Plus.git
 cd HLS-Downloader-Plus
 ```
 
@@ -460,7 +460,7 @@ python m3u8_downloader.py -u "<URL>" -w 30
 ```bash
 # 1. Fork 本项目
 # 2. 克隆你的 fork
-git clone https://github.com/your-username/HLS-Downloader-Plus.git
+git clone https://github.com/374857922/HLS-Downloader-Plus.git
 
 # 3. 创建功能分支
 git checkout -b feature/amazing-feature
