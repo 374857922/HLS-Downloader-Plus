@@ -524,8 +524,8 @@ git push origin feature/amazing-feature
 
 ## 💬 联系方式
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/HLS-Downloader-Plus/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/HLS-Downloader-Plus/discussions)
+- **Issues:** [GitHub Issues](https://github.com/374857922/HLS-Downloader-Plus/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/374857922/HLS-Downloader-Plus/discussions)
 
 ---
 
@@ -533,6 +533,6 @@ git push origin feature/amazing-feature
 
 **如果这个项目对你有帮助，请给一个 ⭐️ Star！**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [leo]
 
 </div>
