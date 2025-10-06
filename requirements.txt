@@ -1,7 +1,9 @@
-requests==2.26.0
-m3u8==0.9.0
-tqdm==4.62.3
-pycryptodome==3.15.0
+# Core dependencies for Python 3.13+
+requests>=2.32.0
+m3u8>=3.5.0
+tqdm>=4.66.0
+pycryptodome>=3.20.0
+yt-dlp==2025.09.26
 
-# 打包工具（仅开发时需要）
-pyinstaller==5.13.2
+# Packaging tools (development only)
+pyinstaller>=6.0.0

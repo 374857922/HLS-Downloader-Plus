@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ====================================
-echo   M3U8 视频下载器
+echo   M3U8 批量视频下载器
 echo ====================================
 echo.
 
@@ -19,8 +19,8 @@ if not exist "venv\Scripts\python.exe" (
     exit /b 1
 )
 
-REM 激活虚拟环境并启动GUI
-echo [*] 正在启动下载器...
+REM 激活虚拟环境并启动批量下载器
+echo [*] 正在启动批量下载器...
 echo.
 venv\Scripts\python.exe m3u8_downloader_gui.py
 
