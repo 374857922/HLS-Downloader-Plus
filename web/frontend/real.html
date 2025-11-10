@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS下载器 Plus - 真实API版</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* CSS变量系统 - 支持暗色/亮色主题 */
+        :root {
+            /* 主色调 */
+            --color-primary: #4f46e5;
+            --color-primary-dark: #3730a3;
+            --color-secondary: #06b6d4;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-info: #3b82f6;
+
+            /* 背景色 */
+            --bg-body: radial-gradient(circle at top, rgba(76, 0, 255, 0.3), transparent 45%),
+                       radial-gradient(circle at bottom, rgba(0, 185, 255, 0.25), transparent 40%),
+                       linear-gradient(135deg, #0d1027 0%, #05060f 100%);
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --bg-card-hover: rgba(51, 65, 85, 0.8);
+            --bg-input: rgba(15, 23, 42, 0.6);
+            --bg-title: rgba(17, 20, 45, 0.85);
+            --bg-status-connected: rgba(37, 211, 102, 0.12);
+            --bg-status-disconnected: rgba(255, 99, 132, 0.18);
+            --bg-progress: rgba(35, 45, 92, 0.5);
+            --bg-metric: rgba(17, 23, 52, 0.65);
+
+            /* 文本色 */
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --text-success: #41f2a7;
+            --text-error: #ff8a8a;
+            --text-warning: #ffd67a;
+            --text-accent: #e5e9ff;
+
+            /* 边框色 */
+            --border-primary: rgba(99, 102, 241, 0.45);
+            --border-secondary: rgba(148, 163, 184, 0.1);
+            --border-input: rgba(255, 255, 255, 0.1);
+            --border-progress: rgba(82, 115, 255, 0.22);
+
+            /* 阴影 */
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-glow: 0 0 20px rgba(90, 240, 255, 0.55);
+
+            /* 尺寸 */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            /* 动画 */
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
+        /* 亮色主题 */
+        [data-theme="light"] {
+            --color-primary: #6366f1;
+            --color-secondary: #06b6d4;
+
+            --bg-body: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --bg-card-hover: rgba(241, 245, 249, 0.9);
+            --bg-input: rgba(255, 255, 255, 0.9);
+            --bg-title: rgba(255, 255, 255, 0.9);
+            --bg-status-connected: rgba(34, 197, 94, 0.1);
+            --bg-status-disconnected: rgba(239, 68, 68, 0.1);
+            --bg-progress: rgba(226, 232, 240, 0.7);
+            --bg-metric: rgba(241, 245, 249, 0.7);
+
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --text-success: #16a34a;
+            --text-error: #dc2626;
+            --text-warning: #d97706;
+
+            --border-primary: rgba(99, 102, 241, 0.3);
+            --border-secondary: rgba(226, 232, 240, 0.6);
+            --border-input: rgba(203, 213, 225, 0.6);
+            --border-progress: rgba(226, 232, 240, 0.8);
+
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 毛玻璃效果基础 */
+        .glass {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: var(--bg-card);
+            border: 1px solid var(--border-secondary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: background-color var(--transition-normal);
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 65%;
+            height: 65%;
+            top: -20%;
+            right: -15%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.35) 0%, transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            bottom: -25%;
+            left: -15%;
+            background: radial-gradient(circle, rgba(163, 0, 255, 0.3) 0%, transparent 70%);
+            filter: blur(90px);
+            pointer-events: none;
+        }
+
+        .title-bar {
+            background: var(--bg-title);
+            backdrop-filter: blur(16px);
+            padding: var(--spacing-lg);
+            text-align: center;
+            border-bottom: 1px solid var(--border-primary);
+            box-shadow: 0 18px 32px rgba(28, 14, 61, 0.35);
+            position: relative;
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            position: absolute;
+            right: var(--spacing-lg);
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: 2px solid var(--color-primary);
+            border-radius: 999px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: all var(--transition-fast);
+        }
+
+        .theme-toggle:hover {
+            background: var(--color-primary);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .title-bar h1 {
+            color: var(--text-primary);
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.025em;
+        }
+
+        .api-status {
+            background: var(--bg-status-connected);
+            color: var(--text-success);
+            text-align: center;
+            padding: var(--spacing-sm);
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(134, 239, 172, 0.18);
+            transition: all var(--transition-fast);
+        }
+
+        .api-status.disconnected {
+            background: var(--bg-status-disconnected);
+            color: var(--text-error);
+            border-bottom-color: rgba(255, 99, 132, 0.3);
+        }
+
+        .main-container {
+            padding: 24px clamp(16px, 5vw, 32px);
+            padding-bottom: 120px;
+            display: grid;
+            grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+            gap: clamp(18px, 3vw, 28px);
+            flex: 1;
+            min-height: 0;
+            align-items: stretch;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(16px, 2.5vw, 24px);
+            min-width: 0;
+            min-height: 0;
+            flex: 1 1 auto;
+            max-height: 100%;
+        }
+
+        .control-section {
+            background: linear-gradient(145deg, rgba(19, 24, 52, 0.9) 0%, rgba(12, 16, 35, 0.92) 100%);
+            border-radius: 16px;
+            padding: 22px;
+            border: 1px solid rgba(88, 120, 255, 0.18);
+            box-shadow: 0 14px 44px rgba(9, 10, 26, 0.55);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .control-section::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            border-radius: 14px;
+            border: 1px solid rgba(115, 255, 224, 0.08);
+            pointer-events: none;
+        }
+
+        .collapsible .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .collapsible .section-header h3 {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .collapse-toggle {
+            background: linear-gradient(120deg, rgba(82, 97, 255, 0.85) 0%, rgba(51, 221, 255, 0.85) 100%);
+            border: 1px solid rgba(122, 198, 255, 0.35);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .collapse-toggle:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(66, 150, 255, 0.4);
+        }
+
+        .collapsible .section-content {
+            margin-top: 18px;
+            display: grid;
+            gap: 16px;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            max-height: 900px;
+            overflow: hidden;
+        }
+
+        .collapsible.collapsed .section-content {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+            margin-top: 0;
+        }
+
+        .control-section h3 {
+            color: #a5b4fc;
+            margin-bottom: 15px;
+            font-size: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .input-group input[type="text"],
+        .input-group input[type="url"],
+        .input-group input[type="number"],
+        .input-group input[type="file"],
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(15, 15, 24, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(120deg, rgba(82, 97, 255, 0.85) 0%, rgba(51, 221, 255, 0.85) 100%);
+            color: white;
+            border: 1px solid rgba(122, 198, 255, 0.45);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 6px;
+            transition: all 0.25s ease;
+            box-shadow: 0 10px 30px rgba(42, 93, 255, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 16px 40px rgba(66, 150, 255, 0.45);
+        }
+
+        .btn:hover::after {
+            opacity: 1;
+        }
+
+        .btn.btn-secondary {
+            background: linear-gradient(120deg, rgba(54, 68, 116, 0.85) 0%, rgba(37, 49, 94, 0.92) 100%);
+            border-color: rgba(104, 120, 173, 0.4);
+            box-shadow: 0 10px 28px rgba(18, 28, 70, 0.5);
+        }
+
+        .btn.btn-danger {
+            background: linear-gradient(120deg, rgba(255, 58, 95, 0.95) 0%, rgba(184, 32, 85, 0.95) 100%);
+            border-color: rgba(255, 120, 160, 0.45);
+            box-shadow: 0 10px 28px rgba(255, 58, 95, 0.35);
+        }
+
+        .btn:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.5;
+        }
+
+        .download-list {
+            background: linear-gradient(145deg, rgba(12, 16, 38, 0.92) 0%, rgba(8, 10, 24, 0.95) 100%);
+            border-radius: 18px;
+            padding: clamp(16px, 3vw, 24px);
+            flex: 1;
+            border: 1px solid rgba(74, 92, 212, 0.25);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 44px rgba(7, 10, 25, 0.6);
+        }
+
+        #downloadItems {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 2vw, 18px);
+        }
+
+        .tasks-active {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 2vw, 18px);
+        }
+
+        .tasks-history {
+            border-top: 1px solid rgba(82, 115, 255, 0.18);
+            padding-top: clamp(12px, 2vw, 18px);
+            display: none;
+            flex-direction: column;
+            gap: clamp(12px, 2vw, 16px);
+        }
+
+        .tasks-history.visible {
+            display: flex;
+        }
+
+        .history-content {
+            display: none;
+            flex-direction: column;
+            gap: clamp(12px, 2vw, 18px);
+        }
+
+        .tasks-history[data-open="true"] .history-content {
+            display: flex;
+        }
+
+        .history-toggle {
+            align-self: flex-start;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+        }
+
+        .download-item {
+            background: linear-gradient(160deg, rgba(19, 24, 64, 0.85) 0%, rgba(10, 14, 37, 0.9) 100%);
+            border-radius: 16px;
+            padding: clamp(16px, 2.5vw, 22px);
+            margin-bottom: clamp(12px, 2vw, 18px);
+            border: 1px solid rgba(82, 115, 255, 0.22);
+            transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInSlide 0.45s ease;
+        }
+
+        .download-item::before {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            border-radius: 14px;
+            border: 1px solid rgba(153, 255, 247, 0.06);
+            pointer-events: none;
+        }
+
+        .download-item:hover {
+            border-color: rgba(132, 198, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 22px 42px rgba(25, 42, 112, 0.45);
+        }
+
+        .download-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .download-item-title {
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .download-item-url {
+            font-size: 12px;
+            color: rgba(176, 194, 255, 0.7);
+            margin-bottom: 6px;
+            letter-spacing: 0.01em;
+        }
+
+        .download-item-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: default;
+            border: 1px solid transparent;
+        }
+
+        .status-pending {
+            background: rgba(255, 196, 61, 0.22);
+            color: #ffd67a;
+            border-color: rgba(255, 196, 61, 0.32);
+        }
+
+        .status-downloading {
+            background: rgba(63, 226, 162, 0.2);
+            color: #4de7c0;
+            border-color: rgba(63, 226, 162, 0.35);
+        }
+
+        .status-completed {
+            background: rgba(77, 141, 255, 0.22);
+            color: #8ec8ff;
+            border-color: rgba(77, 141, 255, 0.35);
+        }
+
+        .status-failed {
+            background: rgba(255, 92, 117, 0.22);
+            color: #ff9cae;
+            border-color: rgba(255, 92, 117, 0.35);
+        }
+
+        .status-paused {
+            background: rgba(201, 255, 92, 0.2);
+            color: #d5ff87;
+            border-color: rgba(201, 255, 92, 0.35);
+        }
+
+        .download-metrics {
+            display: flex;
+            gap: clamp(12px, 2vw, 18px);
+            margin-top: 12px;
+            margin-bottom: clamp(12px, 2vw, 18px);
+            flex-wrap: wrap;
+        }
+
+        .metric {
+            background: rgba(17, 23, 52, 0.65);
+            border-radius: 12px;
+            padding: 10px 14px;
+            border: 1px solid rgba(82, 115, 255, 0.18);
+            min-width: 120px;
+        }
+
+        .metric-label {
+            display: block;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(186, 198, 255, 0.55);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f2f5ff;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: rgba(35, 45, 92, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(103, 146, 255, 0.35), rgba(44, 239, 255, 0.25));
+            mix-blend-mode: screen;
+            animation: shimmer 2s linear infinite;
+            transform: translateX(-100%);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(120deg, #57a0ff 0%, #5af0ff 40%, #9b7bff 100%);
+            border-radius: 8px;
+            transition: width 0.35s ease;
+            box-shadow: 0 0 18px rgba(90, 240, 255, 0.55);
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 13, 30, 0.92);
+            padding: 14px clamp(16px, 4vw, 28px);
+            border-top: 1px solid rgba(73, 100, 255, 0.22);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            letter-spacing: 0.02em;
+            box-shadow: 0 -10px 24px rgba(5, 8, 20, 0.45);
+            z-index: 60;
+        }
+
+        .task-count {
+            color: rgba(176, 194, 255, 0.75);
+        }
+
+        .status-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(176, 194, 255, 0.8);
+        }
+
+        .status-controls label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: inherit;
+        }
+
+        .status-controls select {
+            background: rgba(17, 24, 56, 0.85);
+            border: 1px solid rgba(82, 115, 255, 0.4);
+            color: #f2f5ff;
+            border-radius: 18px;
+            padding: 6px 14px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .status-controls select:focus {
+            border-color: rgba(132, 198, 255, 0.7);
+            box-shadow: 0 0 0 3px rgba(82, 115, 255, 0.25);
+        }
+
+        .right-panel {
+            width: clamp(200px, 22vw, 280px);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .url-input-group input {
+            flex: 1;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            background: linear-gradient(135deg, #586476 0%, #445168 100%);
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .cookies-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .cookies-info.success {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #22c55e;
+        }
+
+        .cookies-info.error {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #475569;
+            border-top: 2px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .notification.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .notification.warning {
+            background: rgba(251, 191, 36, 0.9);
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes shimmer {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(100%);
+            }
+        }
+
+        .download-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            background: linear-gradient(120deg, rgba(54, 68, 116, 0.75) 0%, rgba(39, 53, 102, 0.82) 100%);
+            color: white;
+            border: 1px solid rgba(104, 120, 173, 0.4);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            box-shadow: 0 8px 18px rgba(10, 14, 32, 0.55);
+        }
+
+        .btn-small:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 12px 24px rgba(27, 40, 85, 0.55);
+        }
+
+        .btn-small.btn-danger {
+            background: linear-gradient(120deg, rgba(255, 58, 95, 0.85) 0%, rgba(184, 32, 85, 0.9) 100%);
+            border-color: rgba(255, 120, 160, 0.5);
+        }
+
+        .btn-small.btn-success {
+            background: linear-gradient(120deg, rgba(61, 224, 176, 0.8) 0%, rgba(43, 169, 196, 0.85) 100%);
+            border-color: rgba(96, 235, 214, 0.45);
+        }
+
+        .btn-small.btn-secondary {
+            background: linear-gradient(120deg, rgba(86, 99, 163, 0.78) 0%, rgba(68, 80, 140, 0.82) 100%);
+            border-color: rgba(132, 154, 217, 0.5);
+        }
+
+        @media (max-width: 1280px) {
+            .main-container {
+                grid-template-columns: minmax(0, 2fr) minmax(200px, 1fr);
+            }
+
+            .download-metrics {
+                gap: 12px;
+            }
+
+            .right-panel {
+                width: clamp(180px, 26vw, 260px);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+            }
+
+            .right-panel {
+                order: -1;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }
+
+            .btn-group {
+                display: contents;
+            }
+
+            .btn-full {
+                width: 100%;
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                font-size: 14px;
+            }
+
+            .title-bar h1 {
+                font-size: 18px;
+            }
+
+            .download-item {
+                border-radius: 14px;
+            }
+
+            .download-metrics {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .metric {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .download-actions {
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .btn-small {
+                flex: 1 1 auto;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <h1>HLS下载器 Plus Web版 v4.0</h1>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="切换主题">
+            <span id="themeIcon">🌙</span>
+            <span id="themeText">暗色</span>
+        </button>
+    </div>
+    
+    <div class="api-status" id="apiStatus">
+        连接后端API中... <span class="loading" id="loadingIndicator"></span>
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <!-- URL输入区域 -->
+            <div class="control-section">
+                <h3>添加下载任务</h3>
+                <div class="input-group">
+                    <label>下载URL:</label>
+                    <div class="url-input-group">
+                        <input type="url" id="urlInput" placeholder="请输入YouTube/M3U8/视频URL..." disabled>
+                        <button class="btn" id="addUrlBtn" onclick="addUrl()" disabled>添加</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cookie设置区域 -->
+            <div class="control-section collapsible collapsed" id="cookieSection">
+                <div class="section-header" onclick="toggleSection('cookieSection')">
+                    <h3>Cookie设置 (YouTube必选)</h3>
+                    <button class="collapse-toggle" type="button" onclick="event.stopPropagation(); toggleSection('cookieSection');" aria-expanded="false">展开</button>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Cookie文件上传:</label>
+                        <div class="file-upload">
+                            选择文件
+                            <input type="file" id="cookiesFile" accept=".txt,.cookies,.cookie" onchange="handleCookiesFile(event)" disabled>
+                        </div>
+                        <div id="cookiesFileInfo" class="cookies-info">支持Netscape格式的cookies文件</div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>浏览器Cookie导入:</label>
+                        <select id="browserSelect" disabled>
+                            <option value="">请选择浏览器</option>
+                            <option value="chrome:Default">Chrome (默认)</option>
+                            <option value="firefox:Default">Firefox (默认)</option>
+                            <option value="edge:Default">Edge (默认)</option>
+                            <option value="opera:Default">Opera (默认)</option>
+                        </select>
+                        <button class="btn btn-secondary" id="importBrowserBtn" onclick="importBrowserCookies()" disabled style="margin-top: 10px;">
+                            浏览器导入Cookie
+                        </button>
+                        <div id="browserCookiesInfo" class="cookies-info">自动从指定浏览器导入YouTube登录Cookie</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下载设置区域 -->
+            <div class="control-section collapsible collapsed" id="downloadSettingsSection">
+                <div class="section-header" onclick="toggleSection('downloadSettingsSection')">
+                    <h3>下载设置</h3>
+                    <button class="collapse-toggle" type="button" onclick="event.stopPropagation(); toggleSection('downloadSettingsSection');" aria-expanded="false">展开</button>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>下载路径:</label>
+                        <input type="text" id="savePath" value="./downloads" placeholder="选择保存路径..." disabled>
+                    </div>
+                    <div class="input-group">
+                        <label>线程数:</label>
+                        <select id="threadCount" disabled>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                            <option value="32">32</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoStart" checked disabled>
+                        <label for="autoStart">添加后自动开始下载</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useProxy" disabled>
+                        <label for="useProxy">使用代理</label>
+                    </div>
+                    <div class="input-group">
+                        <label>代理地址:</label>
+                        <input type="text" id="proxyAddress" placeholder="http://proxy:port" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下载列表 -->
+            <div class="download-list">
+                <h3>下载列表</h3>
+                <div id="downloadItems">
+                    <div id="tasksEmptyPlaceholder" class="cookies-info">等待连接后端API...</div>
+                    <div id="activeTasksContainer" class="tasks-active"></div>
+                    <div id="historyTasks" class="tasks-history" data-open="false">
+                        <button class="collapse-toggle history-toggle" type="button" onclick="toggleHistoryTasks()" aria-expanded="false">展开历史任务</button>
+                        <div class="history-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="btn-group">
+                <button class="btn btn-full" onclick="startAllDownloads()" disabled>开始下载</button>
+                <button class="btn btn-secondary btn-full" onclick="pauseAllDownloads()" disabled>暂停下载</button>
+                <button class="btn btn-secondary btn-full" onclick="resumeAllDownloads()" disabled>继续下载</button>
+                <button class="btn btn-danger btn-full" onclick="removeAllCompleted()" disabled>清除已完成</button>
+                <button class="btn btn-danger btn-full" onclick="clearAllTasks()" disabled>清空列表</button>
+                <button class="btn btn-full" onclick="exportConfig()" disabled>导出配置</button>
+                <button class="btn btn-full" onclick="showImportConfig()" disabled>导入配置</button>
+                <button class="btn btn-full" onclick="refreshTasks()" disabled>刷新任务</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-stats">
+            <span class="task-count">总任务: <span id="totalTasks">0</span> | </span>
+            <span>进行中: <span id="activeTaskCount">0</span> | </span>
+            <span>已完成: <span id="completedTaskCount">0</span></span>
+        </div>
+        <div class="status-controls">
+            <label for="refreshIntervalSelect">
+                刷新频率:
+                <select id="refreshIntervalSelect">
+                    <option value="1000">1 秒</option>
+                    <option value="2000" selected>2 秒</option>
+                    <option value="5000">5 秒</option>
+                    <option value="10000">10 秒</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <!-- 文件上传（隐藏） -->
+    <input type="file" id="configImportFile" style="display: none;" accept=".json" onchange="handleConfigImport(event)">
+
+    <!-- 隐藏文件上传 -->
+    <input type="file" id="hiddenFileInput" style="display: none;">
+
+    <div id="notificationContainer"></div>
+
+    <script>
+        // API基础URL
+        const API_BASE = 'http://localhost:8080/api';
+        const WS_BASE = 'ws://localhost:8080/ws/progress';
+        const ACTIVE_STATUSES = new Set(['pending', 'downloading', 'paused']);
+        let apiConnected = false;
+        let downloadTasks = [];
+        let updateInterval = null;
+        let websocket = null;
+        let refreshIntervalMs = 2000;
+
+        // 检查API连接状态
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`);
+                if (response.ok) {
+                    apiConnected = true;
+                    updateApiStatus('已连接到后端API', false);
+                    enableAllControls();
+                    loadTasks();
+                    loadConfig();
+                    startAutoUpdate();
+                    connectWebSocket();
+                    showNotification('🎉 后端API连接成功！', 'success');
+                    return true;
+                }
+            } catch (error) {
+                apiConnected = false;
+                updateApiStatus('❌ 无法连接到后端服务', true);
+                disableAllControls();
+                showNotification('请先启动后端服务：python web/app/main.py', 'warning');
+                return false;
+            }
+        }
+
+        // 连接WebSocket
+        function connectWebSocket() {
+            if (websocket) {
+                websocket.close();
+            }
+            
+            try {
+                websocket = new WebSocket(WS_BASE);
+                
+                websocket.onopen = function() {
+                    console.log('[DEBUG] WebSocket连接已建立');
+                };
+                
+                websocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'progress') {
+                            handleProgressUpdate(data);
+                        }
+                    } catch (e) {
+                        console.error('[ERROR] WebSocket消息解析失败:', e);
+                    }
+                };
+                
+                websocket.onclose = function() {
+                    console.log('[DEBUG] WebSocket连接已关闭');
+                };
+                
+                websocket.onerror = function(error) {
+                    console.error('[ERROR] WebSocket连接错误:', error);
+                };
+                
+            } catch (error) {
+                console.error('[ERROR] WebSocket连接失败:', error);
+            }
+        }
+
+        // 处理进度更新
+        function handleProgressUpdate(data) {
+            console.log('[DEBUG] 收到进度更新:', data);
+            
+            // 更新任务数据
+            const taskIndex = downloadTasks.findIndex(t => t.id === data.task_id);
+            if (taskIndex !== -1) {
+                const task = downloadTasks[taskIndex];
+                task.progress = data.progress;
+                if (data.message) {
+                    task.status_message = data.message;
+                    // 如果消息包含错误信息，更新状态
+                    if (data.message.includes('错误') || data.message.includes('失败')) {
+                        task.status = 'failed';
+                        task.error_message = data.message;
+                    } else if (data.message.includes('完成')) {
+                        task.status = 'completed';
+                    }
+                }
+                
+                // 更新界面中的任务项
+                updateTaskElement(data.task_id, task);
+            }
+        }
+
+        // 更新单个任务元素
+        function updateTaskElement(taskId, task, options = {}) {
+            const taskElement = document.getElementById(`task-${taskId}`);
+            if (!taskElement) return;
+            const previousStatus = taskElement.dataset.status || taskElement.previousStatus || '';
+            
+            // 更新进度条
+            const progressFill = taskElement.querySelector('[data-role="progress-fill"]');
+            if (progressFill) {
+                progressFill.style.width = `${task.progress || 0}%`;
+            }
+            
+            // 更新信息
+            const statusValue = taskElement.querySelector('[data-role="status-text"]');
+            if (statusValue) {
+                statusValue.textContent = task.error_message || task.status_message || getStatusText(task.status);
+            }
+
+            const progressValue = taskElement.querySelector('[data-role="progress-text"]');
+            if (progressValue) {
+                progressValue.textContent = `${Math.round(task.progress || 0)}%`;
+            }
+
+            // 更新任务状态
+            const statusElement = taskElement.querySelector('.download-item-status');
+            if (statusElement) {
+                statusElement.textContent = getStatusText(task.status);
+                statusElement.className = `download-item-status status-${task.status}`;
+            }
+            
+            taskElement.dataset.status = task.status;
+            taskElement.previousStatus = task.status;
+
+            if (!options.silent && previousStatus !== task.status) {
+                const index = downloadTasks.findIndex(t => t.id === taskId);
+                if (index !== -1) {
+                    downloadTasks[index] = { ...downloadTasks[index], ...task };
+                    syncTaskList(downloadTasks);
+                }
+            }
+        }
+
+        // 单个任务操作函数
+        async function pauseTask(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/${taskId}/pause`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    showNotification('任务已暂停', 'success');
+                    loadTasks();
+                } else {
+                    const data = await response.json();
+                    showNotification('暂停任务失败: ' + (data.detail || data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('暂停任务失败: ' + error.message, 'error');
+            }
+        }
+
+        async function resumeTask(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/${taskId}/resume`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    showNotification('任务已继续', 'success');
+                    loadTasks();
+                } else {
+                    const data = await response.json();
+                    showNotification('继续任务失败: ' + (data.detail || data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('继续任务失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('任务已删除', 'success');
+                    loadTasks();
+                } else {
+                    const data = await response.json();
+                    showNotification('删除任务失败: ' + (data.detail || data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('删除任务失败: ' + error.message, 'error');
+            }
+        }
+
+        async function openFile(filename) {
+            try {
+                const response = await fetch(`${API_BASE}/files/${encodeURIComponent(filename)}/download`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    showNotification('打开文件失败', 'error');
+                }
+            } catch (error) {
+                showNotification('打开文件失败: ' + error.message, 'error');
+            }
+        }
+
+        // 更新API状态显示
+        function updateApiStatus(message, isDisconnected) {
+            const status = document.getElementById('apiStatus');
+            status.innerHTML = message + (!isDisconnected ? '' : ' <span class="loading"></span>');
+            status.className = 'api-status' + (isDisconnected ? ' disconnected' : '');
+        }
+
+        // 启用所有控件
+        function enableAllControls() {
+            document.querySelectorAll('input, select, button').forEach(el => {
+                if (el.id !== 'hiddenFileInput' && el.id !== 'configImportFile') {
+                    el.disabled = false;
+                }
+            });
+        }
+
+        // 禁用所有控件
+        function disableAllControls() {
+            document.querySelectorAll('input, select, button').forEach(el => {
+                if (el.id !== 'hiddenFileInput' && el.id !== 'configImportFile') {
+                    el.disabled = true;
+                }
+            });
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const toggleButton = section.querySelector('.collapse-toggle');
+            const isCollapsed = section.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                section.classList.remove('collapsed');
+                if (toggleButton) {
+                    toggleButton.textContent = '收起';
+                    toggleButton.setAttribute('aria-expanded', 'true');
+                }
+            } else {
+                section.classList.add('collapsed');
+                if (toggleButton) {
+                    toggleButton.textContent = '展开';
+                    toggleButton.setAttribute('aria-expanded', 'false');
+                }
+            }
+        }
+
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`);
+                if (response.ok) {
+                    const data = await response.json();
+                    downloadTasks = Array.isArray(data) ? data : [];
+                    syncTaskList(downloadTasks);
+                    updateStatusBar();
+                    console.log('📥 已加载', downloadTasks.length, '个任务');
+                }
+            } catch (error) {
+                console.error('加载任务失败:', error);
+            }
+        }
+
+        // 加载配置
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const config = data.config || {};
+
+                    // 应用配置到界面 - 遍历所有配置项
+                    console.log('⚙️ 正在加载配置:', config);
+
+                    // 下载目录
+                    if (config.download_dir) {
+                        document.getElementById('savePath').value = config.download_dir;
+                    }
+
+                    // 线程数
+                    if (config.default_threads) {
+                        const threadSelect = document.getElementById('threadCount');
+                        const targetValue = String(config.default_threads);
+                        const hasOption = Array.from(threadSelect.options).some(option => option.value === targetValue);
+
+                        if (!hasOption) {
+                            const option = document.createElement('option');
+                            option.value = targetValue;
+                            option.textContent = targetValue;
+                            threadSelect.appendChild(option);
+                        }
+
+                        threadSelect.value = targetValue;
+                    }
+
+                    // 代理设置
+                    if (config.use_proxy !== undefined) {
+                        const useProxyCheckbox = document.getElementById('useProxy');
+                        const proxyInput = document.getElementById('proxyAddress');
+                        useProxyCheckbox.checked = config.use_proxy;
+                        proxyInput.disabled = !config.use_proxy;
+
+                        if (config.proxy_url) {
+                            proxyInput.value = config.proxy_url;
+                        }
+                        console.log('代理设置已加载:', config.use_proxy, config.proxy_url);
+                    }
+
+                    // Cookie文件 - 只显示文件名
+                    if (config.cookies_file) {
+                        const cookiesInfo = document.getElementById('cookiesFileInfo');
+                        const filename = config.cookies_file.split('\\').pop().split('/').pop();
+                        cookiesInfo.textContent = `已加载 Cookie 文件: ${filename}`;
+                        cookiesInfo.className = 'cookies-info success';
+                        console.log('Cookie文件已加载:', config.cookies_file);
+                    }
+
+                    // 浏览器Cookie
+                    if (config.cookies_from_browser) {
+                        const browserSelect = document.getElementById('browserSelect');
+                        browserSelect.value = config.cookies_from_browser;
+                        const browserCookiesInfo = document.getElementById('browserCookiesInfo');
+                        browserCookiesInfo.textContent = `已配置浏览器: ${config.cookies_from_browser}`;
+                        browserCookiesInfo.className = 'cookies-info';
+                        console.log('浏览器Cookie已加载:', config.cookies_from_browser);
+                    }
+
+                    console.log('✅ 配置已加载并应用到界面');
+                } else {
+                    console.warn('配置加载失败:', data.message);
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                showNotification('加载配置失败: ' + error.message, 'error');
+            }
+        }
+
+        function syncTaskList(tasks) {
+            const activeContainer = document.getElementById('activeTasksContainer');
+            const historyWrapper = document.getElementById('historyTasks');
+            const historyContent = historyWrapper ? historyWrapper.querySelector('.history-content') : null;
+            const placeholder = document.getElementById('tasksEmptyPlaceholder');
+            if (!activeContainer || !historyWrapper || !historyContent) {
+                return;
+            }
+
+            const activeIds = new Set();
+            const historyIds = new Set();
+            let activePosition = 0;
+            let historyPosition = 0;
+
+            tasks.forEach(task => {
+                const isActive = ACTIVE_STATUSES.has(task.status);
+                const targetContainer = isActive ? activeContainer : historyContent;
+                const position = isActive ? activePosition++ : historyPosition++;
+                const referenceNode = targetContainer.children[position] || null;
+                let element = document.getElementById(`task-${task.id}`);
+
+                if (element) {
+                    updateTaskElement(task.id, task, { silent: true });
+                } else {
+                    element = createDownloadItem(task);
+                }
+
+                if (!referenceNode || referenceNode !== element) {
+                    targetContainer.insertBefore(element, referenceNode);
+                }
+
+                if (isActive) {
+                    activeIds.add(task.id);
+                } else {
+                    historyIds.add(task.id);
+                }
+            });
+
+            pruneContainerChildren(activeContainer, activeIds);
+            pruneContainerChildren(historyContent, historyIds);
+
+            if (historyContent.children.length > 0) {
+                historyWrapper.classList.add('visible');
+            } else {
+                historyWrapper.classList.remove('visible');
+                historyWrapper.setAttribute('data-open', 'false');
+            }
+
+            updateHistoryToggleLabel(historyContent.children.length);
+
+            const hasTasks = activeContainer.children.length > 0 || historyContent.children.length > 0;
+            if (placeholder) {
+                placeholder.style.display = hasTasks ? 'none' : 'block';
+            }
+        }
+
+        function pruneContainerChildren(container, validIds) {
+            const children = Array.from(container.children);
+            children.forEach(child => {
+                const childId = child.dataset ? child.dataset.taskId : null;
+                if (!childId || !validIds.has(childId)) {
+                    child.remove();
+                }
+            });
+        }
+
+        function updateHistoryToggleLabel(count) {
+            const historyWrapper = document.getElementById('historyTasks');
+            if (!historyWrapper) return;
+            const toggleBtn = historyWrapper.querySelector('.history-toggle');
+            if (!toggleBtn) return;
+            const isOpen = historyWrapper.getAttribute('data-open') === 'true';
+            const baseText = isOpen ? '收起历史任务' : '展开历史任务';
+            toggleBtn.innerHTML = count > 0 ? `${baseText} <span>(${count})</span>` : baseText;
+            toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (count === 0) {
+                toggleBtn.style.display = 'none';
+            } else {
+                toggleBtn.style.display = 'inline-flex';
+            }
+        }
+
+        function toggleHistoryTasks() {
+            const historyWrapper = document.getElementById('historyTasks');
+            if (!historyWrapper || !historyWrapper.classList.contains('visible')) return;
+            const historyContent = historyWrapper.querySelector('.history-content');
+            if (!historyContent) return;
+            const isOpen = historyWrapper.getAttribute('data-open') === 'true';
+            historyWrapper.setAttribute('data-open', isOpen ? 'false' : 'true');
+            updateHistoryToggleLabel(historyContent.children.length);
+        }
+
+        // 创建下载项HTML
+        function createDownloadItem(task) {
+            const item = document.createElement('div');
+            item.className = 'download-item';
+            item.id = `task-${task.id}`;
+            item.previousStatus = task.status;
+            item.dataset.taskId = task.id;
+            item.dataset.status = task.status;
+            const safeUrl = task.url || '';
+            
+            item.innerHTML = `
+                <div class="download-item-header">
+                    <div>
+                        <div class="download-item-title">${task.filename || '下载中...'}</div>
+                        <div class="download-item-url">${safeUrl.substring(0, 50)}${safeUrl.length > 50 ? '...' : ''}</div>
+                    </div>
+                    <span class="download-item-status status-${task.status}">${getStatusText(task.status)}</span>
+                </div>
+                <div class="download-metrics">
+                    <div class="metric">
+                        <span class="metric-label">状态</span>
+                        <span class="metric-value" data-role="status-text">${task.error_message || task.status_message || getStatusText(task.status)}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">进度</span>
+                        <span class="metric-value" data-role="progress-text">${Math.round(task.progress || 0)}%</span>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-role="progress-fill" style="width: ${task.progress || 0}%"></div>
+                </div>
+                <div class="download-actions">
+                    ${task.status === 'downloading' ? 
+                        `<button class="btn-small btn-danger" onclick="pauseTask('${task.id}')">暂停</button>` : 
+                        ''}
+                    ${task.status === 'paused' ? 
+                        `<button class="btn-small btn-success" onclick="resumeTask('${task.id}')">继续</button>` : 
+                        ''}
+                    ${['completed', 'failed', 'pending'].includes(task.status) ? 
+                        `<button class="btn-small btn-danger" onclick="deleteTask('${task.id}')">删除</button>` : 
+                        ''}
+                </div>
+            `;
+            
+            return item;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'downloading': '下载中',
+                'completed': '已完成',
+                'failed': '失败',
+                'paused': '已暂停'
+            };
+            return statusMap[status] || '未知';
+        }
+
+        // 添加URL任务
+        async function addUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            
+            if (!url) {
+                showNotification('请输入视频URL', 'warning');
+                return;
+            }
+            
+            try {
+                const threadSelect = document.getElementById('threadCount');
+                let maxWorkers = parseInt(threadSelect.value, 16);
+                if (Number.isNaN(maxWorkers) || maxWorkers <= 0) {
+                    maxWorkers = 8;
+                }
+
+                const outputDirInput = document.getElementById('savePath');
+                const outputDir = outputDirInput.value && outputDirInput.value.trim() ? outputDirInput.value.trim() : './downloads';
+                
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        output_dir: outputDir,
+                        max_workers: maxWorkers
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // 检查响应是否成功 HTTP 状态码为200-299
+                if (response.ok) {
+                    document.getElementById('urlInput').value = '';
+                    showNotification('✅ 任务添加成功', 'success');
+                    loadTasks(); // 重新加载任务列表
+                } else {
+                    // 处理HTTP错误响应
+                    showNotification('添加任务失败: ' + (data.detail || data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('添加任务失败: ' + error.message, 'error');
+                console.error('添加任务错误:', error);
+            }
+        }
+
+        // 处理Cookie文件上传
+        async function handleCookiesFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                document.getElementById('cookiesFileInfo').innerHTML = '正在上传Cookie文件...';
+                document.getElementById('cookiesFileInfo').className = 'cookies-info';
+                
+                const response = await fetch(`${API_BASE}/cookies/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('cookiesFileInfo').innerHTML = `✅ ${data.message}<br>文件: ${file.name}`;
+                    document.getElementById('cookiesFileInfo').className = 'cookies-info success';
+                    showNotification('🍪 Cookie文件上传成功', 'success');
+                } else {
+                    document.getElementById('cookiesFileInfo').innerHTML = `❌ ${data.message}`;
+                    document.getElementById('cookiesFileInfo').className = 'cookies-info error';
+                    showNotification('Cookie上传失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                document.getElementById('cookiesFileInfo').innerHTML = '上传失败: ' + error.message;
+                document.getElementById('cookiesFileInfo').className = 'cookies-info error';
+                showNotification('Cookie上传失败', 'error');
+            }
+            
+            // 清空文件选择
+            event.target.value = '';
+        }
+
+        // 从浏览器导入Cookie
+        async function importBrowserCookies() {
+            const browserSelect = document.getElementById('browserSelect').value;
+            
+            if (!browserSelect) {
+                showNotification('请先选择浏览器', 'warning');
+                return;
+            }
+            
+            try {
+                document.getElementById('browserCookiesInfo').innerHTML = '正在从浏览器导入Cookie...';
+                document.getElementById('browserCookiesInfo').className = 'cookies-info';
+                
+                const response = await fetch(`${API_BASE}/cookies/browser`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({browser_spec: browserSelect})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('browserCookiesInfo').innerHTML = 
+                        `✅ ${data.message}<br>Cookie数量: ${data.cookie_count || 0}`;
+                    document.getElementById('browserCookiesInfo').className = 'cookies-info success';
+                    showNotification('🍪 浏览器Cookie导入成功', 'success');
+                } else {
+                    document.getElementById('browserCookiesInfo').innerHTML = `❌ ${data.message}`;
+                    document.getElementById('browserCookiesInfo').className = 'cookies-info error';
+                    showNotification('浏览器Cookie导入失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                document.getElementById('browserCookiesInfo').innerHTML = '导入失败: ' + error.message;
+                document.getElementById('browserCookiesInfo').className = 'cookies-info error';
+                showNotification('浏览器Cookie导入失败', 'error');
+            }
+        }
+
+        // 开始所有下载
+        async function startAllDownloads() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/start`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('🚀 开始下载任务', 'success');
+                } else {
+                    showNotification('开始下载失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('开始下载失败', 'error');
+            }
+        }
+
+        // 暂停所有下载
+        async function pauseAllDownloads() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/pause`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('⏸️ 下载任务已暂停', 'success');
+                } else {
+                    showNotification('暂停下载失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('暂停下载失败', 'error');
+            }
+        }
+
+        // 继续所有下载
+        async function resumeAllDownloads() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/resume`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('▶️ 继续下载任务', 'success');
+                } else {
+                    showNotification('继续下载失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('继续下载失败', 'error');
+            }
+        }
+
+        // 清除已完成任务
+        async function removeAllCompleted() {
+            if (!confirm('确定要清除所有已完成的任务吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/tasks/clear/completed`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('🧹 已清除完成的任务', 'success');
+                    loadTasks();
+                } else if (data.message && data.message.includes('没有已完成的任务')) {
+                    showNotification('当前没有可清除的已完成任务', 'warning');
+                } else {
+                    showNotification('清除任务失败: ' + (data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('清除任务失败', 'error');
+            }
+        }
+
+        // 清空所有任务
+        async function clearAllTasks() {
+            if (!confirm('确定要清空所有下载任务吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/tasks/clear`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('🗑️ 已清空所有任务', 'success');
+                    loadTasks();
+                } else if (data.message && data.message.includes('已经为空')) {
+                    downloadTasks = [];
+                    syncTaskList(downloadTasks);
+                    updateStatusBar();
+                    showNotification('任务列表已经为空', 'warning');
+                } else {
+                    showNotification('清空任务失败: ' + (data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                showNotification('清空任务失败', 'error');
+            }
+        }
+
+        // 导出配置
+        async function exportConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config/export`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'hls-downloader-config.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showNotification('📤 配置导出成功', 'success');
+                } else {
+                    showNotification('导出配置失败', 'error');
+                }
+            } catch (error) {
+                showNotification('导出配置失败', 'error');
+            }
+        }
+
+        // 显示导入配置
+        function showImportConfig() {
+            document.getElementById('configImportFile').click();
+        }
+
+        // 主题切换功能
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            // 更新按钮显示
+            updateThemeButton(newTheme);
+
+            showNotification(`已切换到${newTheme === 'light' ? '亮色' : '暗色'}主题`, 'success');
+        }
+
+        // 更新主题按钮显示
+        function updateThemeButton(theme) {
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+
+            if (theme === 'light') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = '亮色';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = '暗色';
+            }
+        }
+
+        // 初始化主题
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButton(savedTheme);
+        }
+
+        // 处理配置导入
+        async function handleConfigImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/import`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('📥 配置导入成功', 'success');
+                    loadConfig(); // 重新加载配置
+                } else {
+                    showNotification('配置导入失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('配置导入失败', 'error');
+            }
+            
+            // 清空文件选择
+            event.target.value = '';
+        }
+
+        // 刷新任务列表
+        function refreshTasks() {
+            loadTasks();
+            showNotification('🔄 任务列表已刷新', 'success');
+        }
+
+        // 更新状态栏
+        function updateStatusBar() {
+            const totalTasks = downloadTasks.length;
+            const activeTasks = downloadTasks.filter(task => ACTIVE_STATUSES.has(task.status)).length;
+            const completedTasks = downloadTasks.filter(task => task.status === 'completed').length;
+
+            const totalEl = document.getElementById('totalTasks');
+            const activeEl = document.getElementById('activeTaskCount');
+            const completedEl = document.getElementById('completedTaskCount');
+            const refreshSelect = document.getElementById('refreshIntervalSelect');
+
+            if (totalEl) totalEl.textContent = totalTasks;
+            if (activeEl) activeEl.textContent = activeTasks;
+            if (completedEl) completedEl.textContent = completedTasks;
+            if (refreshSelect && refreshSelect.value !== String(refreshIntervalMs)) {
+                refreshSelect.value = String(refreshIntervalMs);
+            }
+        }
+
+        // 自动更新
+        function startAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            updateInterval = setInterval(() => {
+                if (apiConnected) {
+                    loadTasks();
+                }
+            }, refreshIntervalMs);
+        }
+
+        function handleRefreshIntervalChange(value) {
+            const parsed = parseInt(value, 10);
+            if (Number.isNaN(parsed) || parsed <= 0) {
+                return;
+            }
+
+            refreshIntervalMs = parsed;
+            startAutoUpdate();
+        }
+
+        // 代理设置
+        document.getElementById('useProxy').addEventListener('change', function(e) {
+            const proxyInput = document.getElementById('proxyAddress');
+            proxyInput.disabled = !e.target.checked;
+            // 自动保存代理设置
+            saveProxyConfig();
+        });
+
+        // 自动保存代理配置
+        async function saveProxyConfig() {
+            const useProxy = document.getElementById('useProxy').checked;
+            const proxyUrl = document.getElementById('proxyAddress').value;
+            const threadCount = document.getElementById('threadCount').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/model`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        download_dir: document.getElementById('savePath').value,
+                        max_concurrent_downloads: 3,
+                        default_threads: parseInt(threadCount),
+                        use_proxy: useProxy,
+                        proxy_url: proxyUrl,
+                        cookies_file: '', // 保持现有设置
+                        cookies_from_browser: '', // 保持现有设置
+                        theme: 'dark'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    console.log('配置已自动保存');
+                }
+            } catch (error) {
+                console.error('保存配置失败:', error);
+            }
+        }
+
+        // 线程数变更时也保存
+        document.getElementById('threadCount').addEventListener('change', saveProxyConfig);
+        document.getElementById('savePath').addEventListener('change', saveProxyConfig);
+
+        // 回车键添加URL
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !this.disabled) {
+                addUrl();
+            }
+        });
+
+        // 页面加载时初始化
+        $(document).ready(function() {
+            console.log('🚀 HLS-Downloader-Plus Web界面启动');
+
+            // 初始化主题
+            initTheme();
+
+            const refreshSelect = document.getElementById('refreshIntervalSelect');
+            if (refreshSelect) {
+                refreshIntervalMs = parseInt(refreshSelect.value, 10) || refreshIntervalMs;
+                refreshSelect.addEventListener('change', function(e) {
+                    handleRefreshIntervalChange(e.target.value);
+                    updateStatusBar();
+                });
+            }
+
+            // 检查API连接
+            checkApiConnection();
+
+            // 定期检查连接状态
+            setInterval(() => {
+                if (!apiConnected) {
+                    checkApiConnection();
+                }
+            }, 5000);
+        });
+
+        // 页面关闭时清理
+        window.addEventListener('beforeunload', function() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>

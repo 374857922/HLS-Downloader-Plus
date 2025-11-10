@@ -44,6 +44,7 @@ class M3U8DownloaderGUI:
         self.cookies_file = None
         self.cookie_jar = None
         self.cookies_from_browser = None
+        self.cookies_from_browser_spec = None  # 确保属性始终存在
 
         if cookies_file:
             cookie_path = Path(cookies_file).expanduser()
@@ -464,6 +465,8 @@ class M3U8DownloaderGUI:
             yt_dlp_path = Path(yt_dlp_path_which)
 
         self.log(f"[*] 使用 yt-dlp: {yt_dlp_path}")
+        self.log("[*] YouTube下载模式: 使用Cookies + 代理（官方2025.10.22临时修复）")
+        self.log("[*] 注意: 某些格式可能仍然不可用（YouTube加强检测）")
 
         # 检查 FFmpeg 是否可用，因为合并格式需要它
         if not shutil.which('ffmpeg'):
@@ -484,10 +487,10 @@ class M3U8DownloaderGUI:
             str(yt_dlp_path),
             '--progress',
             '--ignore-errors',
-            # 优先选择H.264 (avc) 和 AAC (mp4a) 编码，如果不可用则回退到最佳格式
-            '--format', 'bestvideo[vcodec^=avc]+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best',
-            # 在必要时将视频重新编码为 MP4，以获得最佳兼容性
-            '--recode-video', 'mp4',
+            # 直接下载最佳格式，不指定编码（避免cookies问题）
+            '--format', 'best',
+            # 不再强制转码为mp4，保持原始格式（2025.10.22 YouTube临时修复）
+            # '--recode-video', 'mp4',
             '--output', str(output_template),
         ]
 
@@ -497,12 +500,35 @@ class M3U8DownloaderGUI:
             self.log(f"[*] 为 yt-dlp 设置代理: {self.proxies['https']}")
 
         # 添加 cookies
-        if self.cookies_file:
+        if self.cookies_file and Path(self.cookies_file).exists():
             cmd.extend(['--cookies', self.cookies_file])
             self.log(f"[*] yt-dlp 使用 cookies 文件: {self.cookies_file}")
-        elif self.cookies_from_browser_spec:
+
+            # 检查cookie文件内容
+            try:
+                with open(self.cookies_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if '.youtube.com' in content:
+                        self.log(f"[*] ✓ Cookie文件包含 youtube.com 的cookie")
+                        # 计算有多少个youtube cookie
+                        youtube_cookies = [line for line in content.split('\n') if '.youtube.com' in line and not line.startswith('#')]
+                        self.log(f"[*] ✓ 找到 {len(youtube_cookies)} 个 youtube.com cookie条目")
+                    else:
+                        self.log(f"[!] ✗ Cookie文件不包含 youtube.com 的cookie，可能导致403错误")
+            except Exception as e:
+                self.log(f"[!] 检查cookie文件失败: {e}")
+
+        elif hasattr(self, 'cookies_from_browser_spec') and self.cookies_from_browser_spec:
             cmd.extend(['--cookies-from-browser', self.cookies_from_browser_spec])
             self.log(f"[*] yt-dlp 尝试从浏览器导入 cookies: {self.cookies_from_browser_spec}")
+        else:
+            self.log("[!] 警告: 未找到有效的 cookie 配置，可能导致下载失败")
+
+        # YouTube下载（2025.10.22: 移除冗余参数，保持最简单形式）
+        if self._is_youtube_url(self.url):
+            # 根据用户反馈，最简单的命令反而有效：--cookies + URL
+            # 保持默认的User-Agent和行为，避免添加过多参数导致问题
+            self.log(f"[*] YouTube视频，使用默认参数下载")
 
 
         cmd.append(self.url)
