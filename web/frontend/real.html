@@ -1045,9 +1045,35 @@
     <div id="notificationContainer"></div>
 
     <script>
-        // API基础URL
-        const API_BASE = 'http://localhost:8080/api';
-        const WS_BASE = 'ws://localhost:8080/ws/progress';
+        // API基础URL - 自动检测环境
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        const hostname = window.location.hostname;
+        
+        // 检测运行环境
+        const isFileProtocol = protocol === 'file:';
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isInDocker = hostname === '0.0.0.0' || hostname === '172.17.0.1';
+        
+        let API_BASE, WS_BASE;
+        
+        if (isFileProtocol) {
+            // 直接打开HTML文件，使用localhost
+            API_BASE = 'http://localhost:8080/api';
+            WS_BASE = 'ws://localhost:8080/ws/progress';
+        } else if (isLocalhost || isInDocker) {
+            // 本地开发或Docker环境，使用相对路径
+            API_BASE = '/api';
+            WS_BASE = `ws://${host}/ws/progress`;
+        } else {
+            // 生产环境，使用当前域名
+            API_BASE = `${protocol}//${host}/api`;
+            WS_BASE = `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/ws/progress`;
+        }
+        
+        console.log(`🔧 检测到环境: ${isFileProtocol ? '本地文件' : (isLocalhost ? '本地开发' : (isInDocker ? 'Docker容器' : '生产环境'))}`);
+        console.log(`🌐 API_BASE: ${API_BASE}`);
+        console.log(`🔌 WS_BASE: ${WS_BASE}`);
         const ACTIVE_STATUSES = new Set(['pending', 'downloading', 'paused']);
         let apiConnected = false;
         let downloadTasks = [];
