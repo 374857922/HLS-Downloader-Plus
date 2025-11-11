@@ -578,11 +578,6 @@ async def websocket_endpoint(websocket: WebSocket):
         await manager.disconnect(websocket)
         print("[DEBUG] WebSocket连接已清理")
 
-# 静态文件服务（HTML前端文件）
-frontend_path = Path(__file__).parent / "../frontend"
-if frontend_path.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
-
 # 文件管理API
 @app.get("/api/files")
 async def get_files():
@@ -860,14 +855,19 @@ async def import_config(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导入配置失败: {str(e)}")
 
+# 静态文件服务（HTML前端文件）- 必须在所有API路由之后
+frontend_path = Path(__file__).parent / "../frontend"
+if frontend_path.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
+
 if __name__ == "__main__":
     # 确保必要的目录存在
     os.makedirs("downloads", exist_ok=True)
     os.makedirs("data", exist_ok=True)
     os.makedirs("data/cookies", exist_ok=True)
     
-    print("🚀 HLS-Downloader-Plus Web服务启动中...")
-    print("📍 访问地址: http://localhost:8080")
-    print("📍 API文档: http://localhost:8080/docs")
+    print("HLS-Downloader-Plus Web服务启动中...")
+    print("访问地址: http://localhost:8080")
+    print("API文档: http://localhost:8080/docs")
     
     uvicorn.run(app, host="0.0.0.0", port=8080, reload=True)
